@@ -1,15 +1,9 @@
 #include <cstdint>
 #include <stddef.h>
 #include <stdlib.h>
+#include <optional>
 
-class memory_list
-{
-  public:
-      memory_list* next_block;
-      void* memory_pool;
-      uint16_t block_size;
-};
-
+#include "memory/memory.hpp"
 
 class allocator
 {
@@ -23,6 +17,6 @@ class allocator
    static allocator* alloc;
    void delete_block(void * addr);
    void* get_block(size_t block_size);
-   memory_list* free_memory_list;
-   memory_list* allocated_memory_list;
+   memory free_memory;
+   memory allocated_memory;
 };

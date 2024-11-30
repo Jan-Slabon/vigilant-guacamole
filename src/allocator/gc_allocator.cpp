@@ -3,44 +3,32 @@
 
 allocator * allocator::alloc = nullptr;
 
+
 void* allocator::get_block(size_t block_size)
 {
-  memory_list * free_memory = free_memory_list;
-  while(free_memory->next_block != nullptr && free_memory->next_block->block_size != block_size) free_memory = free_memory->next_block;
-  if(free_memory->next_block != nullptr)
+  std::optional<memory_block*> reused_block = free_memory.release_block(block_size);
+  if(reused_block)
   {
-    memory_list * second_block = allocated_memory_list->next_block;
-    allocated_memory_list->next_block = free_memory->next_block;
-
     printf("Realocating %ld Bytes of data\n", block_size);
-
-    free_memory->next_block = free_memory->next_block->next_block;
-    allocated_memory_list->next_block->next_block = second_block;
-    return allocated_memory_list->next_block->memory_pool;
+    allocated_memory.insert(reused_block.value());
+    return reused_block.value()->memory_pool;
   }
-  auto handle = allocated_memory_list;
-  while(handle->next_block != nullptr) {handle = handle->next_block; printf("O\n");}
-  handle->next_block = reinterpret_cast<memory_list*>( malloc( sizeof(memory_list) ) );
-  handle = handle->next_block;
-  handle->next_block = nullptr;
-  handle->block_size = block_size;
-  handle->memory_pool = malloc(block_size);
-  return handle->memory_pool;
+  printf("Alocating %ld Bytes of data\n", block_size);
+  memory_block* new_block = reinterpret_cast<memory_block*>( malloc( sizeof(memory_block) ) );
+  new (new_block) memory_block(malloc(block_size), block_size);
+
+  allocated_memory.insert(new_block);
+  return new_block->memory_pool;
 }
 
 void allocator::delete_block(void * addr)
 {
-  auto handle = allocated_memory_list;
-  while(handle->next_block != nullptr && handle->next_block->memory_pool != addr) {handle = handle->next_block; printf("I\n");} // this works only because of lazy evaluation of a && b expression
-  if(handle->next_block != nullptr)
+  std::optional<memory_block *> deleted_block = allocated_memory.release_block(addr);
+
+  if(deleted_block)
   {
-    memory_list* second_block = free_memory_list->next_block;
-    free_memory_list->next_block = handle->next_block;
-
-    printf("Freeing %u bits of memory\n", handle->next_block->block_size);
-
-    handle->next_block = handle->next_block->next_block;
-    free_memory_list->next_block->next_block = second_block;
+    printf("Freeing %u bits of memory\n", deleted_block.value()->block_size);
+    free_memory.insert(deleted_block.value());
   }
   else
   {
@@ -50,7 +38,6 @@ void allocator::delete_block(void * addr)
 
 void * allocator::reserve(size_t size)
 {
-  printf("Allocation of %lu bits\n", size);
   void* memory_block = get_block(size);
   return memory_block;
 }
@@ -65,10 +52,8 @@ allocator* allocator::getInstance()
   if(alloc == nullptr)
   {
       alloc = reinterpret_cast<allocator *> (malloc(sizeof(allocator)));
-      alloc->free_memory_list = reinterpret_cast<memory_list *> (malloc(sizeof(memory_list)));
-      alloc->free_memory_list->next_block = nullptr;
-      alloc->allocated_memory_list = reinterpret_cast<memory_list *> (malloc(sizeof(memory_list)));
-      alloc->allocated_memory_list->next_block = nullptr;
+      new (&alloc->free_memory) memory();
+      new (&alloc->allocated_memory) memory();
   }
   return alloc;
 }
