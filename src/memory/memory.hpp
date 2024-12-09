@@ -8,11 +8,12 @@ class memory_block
 {
    public:
    memory_block() : memory_pool{nullptr}, block_size{0}, next_block{nullptr}{}
-   memory_block(void* mem_pool, uint16_t block_size) : memory_pool{mem_pool}, block_size{block_size}, next_block{nullptr}{}
+   memory_block(void* mem_pool, size_t block_size) : memory_pool{mem_pool}, block_size{block_size}, next_block{nullptr}{}
+   memory_block(size_t block_size) : memory_pool{this + 1}, block_size{block_size}, next_block{nullptr}{}
    friend memory_list;
    memory_block* next_block;
    void* memory_pool;
-   uint16_t block_size;
+   size_t block_size;
 };
 class memory_list
 {
@@ -34,20 +35,23 @@ class memory_list
       memory_list& operator++();
       memory_list operator++(int){memory_list tmp = *this; ++(*this); return tmp;}
 
-      uint16_t get_block_size(){ return block->block_size;}
+      size_t get_block_size(){ return block->block_size;}
       std::optional<memory_block*> pop_next();
       void push_next(memory_block* el);
+      void split_block(size_t block_size);
+      bool left_neighbour(memory_block* ptr);
+      bool right_neighbour(memory_block * ptr);
 
       friend bool operator== (const memory_list& a, const memory_list& b){return a.block == b.block;}
       friend bool operator!= (const memory_list& a, const memory_list& b) { return !(a==b); }
-   private:
+   //private:
    memory_block * block{};
 };
 
 class memory
 {
    public:
-   void insert(memory_block* ptr);
+   void insert(memory_block* ptr, bool merge_blocks = false);
    std::optional<memory_block*> release_block(size_t block_size);
    std::optional<memory_block*> release_block(void * addr);
    memory(){}

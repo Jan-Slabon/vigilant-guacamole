@@ -9,13 +9,13 @@ void* allocator::get_block(size_t block_size)
   std::optional<memory_block*> reused_block = free_memory.release_block(block_size);
   if(reused_block)
   {
-    printf("Realocating %ld Bytes of data\n", block_size);
+    printf("Realocating %zd Bytes of data\n", block_size);
     allocated_memory.insert(reused_block.value());
     return reused_block.value()->memory_pool;
   }
-  printf("Alocating %ld Bytes of data\n", block_size);
-  memory_block* new_block = reinterpret_cast<memory_block*>( malloc( sizeof(memory_block) ) );
-  new (new_block) memory_block(malloc(block_size), block_size);
+  printf("Alocating %zd Bytes of data\n", block_size);
+  memory_block* new_block = reinterpret_cast<memory_block*>( malloc( sizeof(memory_block) + block_size ) );
+  new (new_block) memory_block(block_size);
 
   allocated_memory.insert(new_block);
   return new_block->memory_pool;
@@ -27,8 +27,8 @@ void allocator::delete_block(void * addr)
 
   if(deleted_block)
   {
-    printf("Freeing %u bits of memory\n", deleted_block.value()->block_size);
-    free_memory.insert(deleted_block.value());
+    printf("Freeing %zd bits of memory\n", deleted_block.value()->block_size);
+    free_memory.insert(deleted_block.value(), true);
   }
   else
   {
