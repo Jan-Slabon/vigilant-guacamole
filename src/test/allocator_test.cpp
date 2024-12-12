@@ -13,17 +13,20 @@ struct test_struct
 
 int main()
 {
-  allocator Al = *allocator::getInstance();
-  test_struct* dummy_struct = static_cast<test_struct *>(Al.reserve(sizeof(test_struct)));
-  dummy_struct->first = 1;
-  dummy_struct->second = 2;
+  allocator Al = allocator::getInstance();
+  test_struct* dummy_struct;
+  for(int i = 0; i <= 10; i++)
+  {
+    dummy_struct = static_cast<test_struct *>(Al.reserve(sizeof(test_struct)));
+    dummy_struct->first = 1;
+    dummy_struct->second = 2;
+  }
   printf("vaules of struct fields are %d and %d\n", dummy_struct->first, dummy_struct->second);
   Al.free(dummy_struct);
   int* dummy_struct2 = static_cast<int *>(Al.reserve(sizeof(int)));
   *dummy_struct2 = 2;
   printf("vaules of struct fields are %d\n", *dummy_struct2);
   Al.free(dummy_struct2);
-  printf("New case\n");
   dummy_struct = static_cast<test_struct *>(Al.reserve(sizeof(test_struct)));
   dummy_struct->first = 1;
   dummy_struct->second = 2;

@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include "gc_allocator.hpp"
 
-allocator * allocator::alloc = nullptr;
-
 
 void* allocator::get_block(size_t block_size)
 {
@@ -14,11 +12,15 @@ void* allocator::get_block(size_t block_size)
     return reused_block.value()->memory_pool;
   }
   printf("Alocating %zd Bytes of data\n", block_size);
-  memory_block* new_block = reinterpret_cast<memory_block*>( malloc( sizeof(memory_block) + block_size ) );
-  new (new_block) memory_block(block_size);
-
-  allocated_memory.insert(new_block);
-  return new_block->memory_pool;
+  free_memory.reserve(block_size);
+  auto new_block = free_memory.release_block(block_size);
+  if(new_block)
+  {
+    allocated_memory.insert(new_block.value());
+    return new_block.value()->memory_pool;
+  }
+  printf("Unable to allocate %zd bytes of memory\n", block_size);
+  return nullptr;
 }
 
 void allocator::delete_block(void * addr)
@@ -28,7 +30,7 @@ void allocator::delete_block(void * addr)
   if(deleted_block)
   {
     printf("Freeing %zd bits of memory\n", deleted_block.value()->block_size);
-    free_memory.insert(deleted_block.value(), true);
+    free_memory.insert(deleted_block.value());
   }
   else
   {
@@ -47,13 +49,8 @@ void allocator::free(void * addr)
   delete_block(addr);
 }
 
-allocator* allocator::getInstance()
+allocator allocator::getInstance()
 {
-  if(alloc == nullptr)
-  {
-      alloc = reinterpret_cast<allocator *> (malloc(sizeof(allocator)));
-      new (&alloc->free_memory) memory();
-      new (&alloc->allocated_memory) memory();
-  }
-  return alloc;
+  static allocator instance{};
+  return instance;
 }

@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <optional>
 
+
+#define PAGE_SIZE 4096
 class memory_list;
 class memory_block
 {
@@ -22,13 +24,7 @@ class memory_list
    using value_type        = memory_block;
    using pointer           = value_type*;
    public:
-      memory_list()
-      {
-         block = reinterpret_cast<memory_block*>(malloc(sizeof(memory_block)));
-         block->block_size = 0;
-         block->memory_pool = nullptr;
-         block->next_block = nullptr;
-      }
+      memory_list():block{nullptr}{}
       memory_list(memory_block * ptr) : block{ptr}{}
       value_type operator*(){return *block;}
       pointer operator->() {return block;}
@@ -47,16 +43,20 @@ class memory_list
    //private:
    memory_block * block{};
 };
-
+template<class ManagementPolicy>
 class memory
 {
    public:
-   void insert(memory_block* ptr, bool merge_blocks = false);
+   void insert(memory_block* ptr);
    std::optional<memory_block*> release_block(size_t block_size);
    std::optional<memory_block*> release_block(void * addr);
-   memory(){}
+   void reserve(size_t block_size);
+   memory();
    memory_list begin(){return head;}
    memory_list end();
    uint16_t size=0;
    memory_list head{};
 };
+
+class ActiveManagement;
+class PassiveManagement;

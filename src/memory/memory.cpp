@@ -1,5 +1,7 @@
 #include "memory.hpp"
-
+#include <assert.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 memory_block illegal_element = memory_block(nullptr, std::numeric_limits<size_t>::max());
 
@@ -29,11 +31,13 @@ void memory_list::split_block(size_t block_size)
 }
 bool memory_list::left_neighbour(memory_block* ptr)
 {
+  if(ptr == nullptr) return false;
   size_t ptr_right_corner = reinterpret_cast<size_t>(ptr) + sizeof(memory_block) + ptr->block_size;
   return reinterpret_cast<memory_block*>(ptr_right_corner) == block;
 }
 bool memory_list::right_neighbour(memory_block* ptr)
 {
+  if(ptr == nullptr) return false;
   size_t right_corner = reinterpret_cast<size_t>(block) + sizeof(memory_block) + block->block_size;
   return reinterpret_cast<memory_block*>(right_corner) == ptr;
 }
@@ -55,20 +59,47 @@ void memory_list::push_next(memory_block* el)
   el->next_block = tmp;
 }
 
-memory_list memory::end(){return memory_list(&illegal_element);}
+template<>
+memory<ActiveManagement>::memory()
+{
+  void * ptr = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+  assert(("Mmap failed to allocate memory", ptr != (void *)-1));
 
-void memory::insert(memory_block* ptr, bool merge_blocks)
+  head.block = reinterpret_cast<memory_block*>(ptr);
+  head.block->block_size = PAGE_SIZE - sizeof(memory_block);
+  head.split_block(0);
+  head.block->memory_pool = nullptr;
+}
+template<>
+memory<PassiveManagement>::memory()
+{
+  void * ptr = sbrk(sizeof(memory_block));
+  assert(("Sbrk failed to allocate memory", ptr != (void*)-1));
+
+  head.block = reinterpret_cast<memory_block*>(ptr);
+  head.block->block_size = 0;
+  head.block->memory_pool = nullptr;
+}
+template<class ManagementPolicy>
+memory_list memory<ManagementPolicy>::end(){return memory_list(&illegal_element);}
+template<>
+void memory<ActiveManagement>::insert(memory_block* ptr)
 {
   memory_list prev;
   for(auto it = begin(); it != end(); ++it) 
   {
-    if(it.right_neighbour(ptr) && merge_blocks)
+    if(it.right_neighbour(ptr) && it != begin())
     {
       printf("Merging blocks of size %zd and %zd\n", it->block_size, ptr->block_size);
       it->block_size += ptr->block_size + sizeof(memory_block); // We are adding block to the memory pool of left aligned block in memory
+      if(it.right_neighbour(it->next_block))
+      {
+        printf("Merging blocks of size %zd and %zd\n", it->block_size, it->next_block->block_size);
+        it->block_size += it->next_block->block_size + sizeof(memory_block);
+      }
       return;
     }
-    else if(it.left_neighbour(ptr) && merge_blocks)
+    else if(it.left_neighbour(ptr))
     {
       printf("Merging blocks of size %zd and %zd\n", ptr->block_size, it->block_size);
       ptr->block_size += it->block_size + sizeof(memory_block); // We are adding block to the memory pool of left aligned block in memory
@@ -76,6 +107,21 @@ void memory::insert(memory_block* ptr, bool merge_blocks)
       prev.push_next(ptr);
       return;
     }
+    else if(prev.block != nullptr && prev->memory_pool < ptr && it->memory_pool > ptr) // we are adding blocks in increasing pointer value order 
+    {
+      prev.push_next(ptr);
+    }
+    prev = it;
+  }
+  prev.push_next(ptr);
+  size++;
+}
+template<>
+void memory<PassiveManagement>::insert(memory_block* ptr)
+{
+  memory_list prev;
+  for(auto it = begin(); it != end(); ++it) 
+  {
     prev = it;
   }
   prev.push_next(ptr);
@@ -84,7 +130,8 @@ void memory::insert(memory_block* ptr, bool merge_blocks)
 /*
 Returns any block from the list matching the given size and removes it from the list
 */
-std::optional<memory_block*> memory::release_block(size_t block_size)
+template<class ManagementPolicy>
+std::optional<memory_block*> memory<ManagementPolicy>::release_block(size_t block_size)
 {
   memory_list prev;
   for(auto it = begin(); it != end(); ++it)
@@ -107,7 +154,8 @@ std::optional<memory_block*> memory::release_block(size_t block_size)
 /*
 Returns a block from the list matching the given payload addres and removes it from the list
 */
-std::optional<memory_block*> memory::release_block(void * addr)
+template<class ManagementPolicy>
+std::optional<memory_block*> memory<ManagementPolicy>::release_block(void * addr)
 {
   memory_list prev;
   for(auto it = begin(); it != end(); ++it)
@@ -121,3 +169,26 @@ std::optional<memory_block*> memory::release_block(void * addr)
   }
   return {};
 }
+/*
+Preallocates block_size amount of free memory
+*/
+template<>
+void memory<ActiveManagement>::reserve(size_t block_size)
+{
+  void * ptr = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+  if(ptr == (void *)-1 || PAGE_SIZE < block_size)
+  {
+    printf("Mmap failed to prealocate memory\n");
+  }
+  else
+  {
+    new (ptr) memory_block(PAGE_SIZE);
+    insert(static_cast<memory_block*>(ptr));
+  }
+}
+
+template std::optional<memory_block*> memory<PassiveManagement>::release_block(void*);
+template std::optional<memory_block*> memory<ActiveManagement>::release_block(void*);
+
+template std::optional<memory_block*> memory<PassiveManagement>::release_block(size_t);
+template std::optional<memory_block*> memory<ActiveManagement>::release_block(size_t);
