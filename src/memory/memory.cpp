@@ -1,7 +1,6 @@
 #include "memory.hpp"
-#include <assert.h>
-#include <sys/mman.h>
-#include <unistd.h>
+#include "sys_deps/sys_mem_alloc.hpp"
+#include <limits>
 
 memory_block illegal_element = memory_block(nullptr, std::numeric_limits<size_t>::max());
 
@@ -10,6 +9,7 @@ memory_list& memory_list::operator++()
   if(block->next_block)
   {
     block = block->next_block;
+    printf("Moving to the next block\n");
     return *this;
   }
   else
@@ -62,8 +62,7 @@ void memory_list::push_next(memory_block* el)
 template<>
 memory<ActiveManagement>::memory()
 {
-  void * ptr = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
-  assert(("Mmap failed to allocate memory", ptr != (void *)-1));
+  void * ptr = page_alloc(PAGE_SIZE);
 
   head.block = reinterpret_cast<memory_block*>(ptr);
   head.block->block_size = PAGE_SIZE - sizeof(memory_block);
@@ -73,8 +72,7 @@ memory<ActiveManagement>::memory()
 template<>
 memory<PassiveManagement>::memory()
 {
-  void * ptr = sbrk(sizeof(memory_block));
-  assert(("Sbrk failed to allocate memory", ptr != (void*)-1));
+  void * ptr = small_alloc(sizeof(memory_block));
 
   head.block = reinterpret_cast<memory_block*>(ptr);
   head.block->block_size = 0;
@@ -122,6 +120,7 @@ void memory<PassiveManagement>::insert(memory_block* ptr)
   memory_list prev;
   for(auto it = begin(); it != end(); ++it) 
   {
+    printf("Going inside the loop\n");
     prev = it;
   }
   prev.push_next(ptr);
@@ -175,10 +174,10 @@ Preallocates block_size amount of free memory
 template<>
 void memory<ActiveManagement>::reserve(size_t block_size)
 {
-  void * ptr = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
-  if(ptr == (void *)-1 || PAGE_SIZE < block_size)
+  void * ptr = page_alloc(block_size);
+  if(ptr == (void *)-1)
   {
-    printf("Mmap failed to prealocate memory\n");
+    printf("Page allocation failed to prealocate memory\n");
   }
   else
   {

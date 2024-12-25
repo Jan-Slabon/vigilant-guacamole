@@ -1,10 +1,7 @@
 #include <iterator>
-#include <limits>
 #include <cstdint>
 #include <optional>
 
-
-#define PAGE_SIZE 4096
 class memory_list;
 class memory_block
 {

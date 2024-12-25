@@ -20,6 +20,7 @@ int main()
     dummy_struct = static_cast<test_struct *>(Al.reserve(sizeof(test_struct)));
     dummy_struct->first = 1;
     dummy_struct->second = 2;
+    printf("%d'th iteration\n", i);
   }
   printf("vaules of struct fields are %d and %d\n", dummy_struct->first, dummy_struct->second);
   Al.free(dummy_struct);

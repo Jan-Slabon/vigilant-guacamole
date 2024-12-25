@@ -9,6 +9,7 @@ void* allocator::get_block(size_t block_size)
   {
     printf("Realocating %zd Bytes of data\n", block_size);
     allocated_memory.insert(reused_block.value());
+    printf("Alocated memory inserted into allocated memory list\n");
     return reused_block.value()->memory_pool;
   }
   printf("Alocating %zd Bytes of data\n", block_size);
