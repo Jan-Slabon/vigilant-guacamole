@@ -9,7 +9,6 @@ memory_list& memory_list::operator++()
   if(block->next_block)
   {
     block = block->next_block;
-    printf("Moving to the next block\n");
     return *this;
   }
   else
@@ -120,7 +119,6 @@ void memory<PassiveManagement>::insert(memory_block* ptr)
   memory_list prev;
   for(auto it = begin(); it != end(); ++it) 
   {
-    printf("Going inside the loop\n");
     prev = it;
   }
   prev.push_next(ptr);

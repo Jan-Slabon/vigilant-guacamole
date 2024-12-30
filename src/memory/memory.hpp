@@ -1,6 +1,7 @@
 #include <iterator>
 #include <cstdint>
 #include <optional>
+#include "memory/raw_pointer.hpp"
 
 class memory_list;
 class memory_block
@@ -11,8 +12,9 @@ class memory_block
    memory_block(size_t block_size) : memory_pool{this + 1}, block_size{block_size}, next_block{nullptr}{}
    friend memory_list;
    memory_block* next_block;
-   void* memory_pool;
+   raw_pointer memory_pool;
    size_t block_size;
+   bool is_referenced = false;
 };
 class memory_list
 {
