@@ -6,7 +6,7 @@ class raw_pointer
     public:
     raw_pointer(void * ptr) : ptr{ptr}{}
     void * operator*(){
-        return ptr;
+        return reinterpret_cast<void*>(*reinterpret_cast<long unsigned*>(ptr));
     }
     raw_pointer operator+(size_t offset)
     {

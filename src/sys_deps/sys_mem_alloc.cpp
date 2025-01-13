@@ -40,24 +40,11 @@ void * small_alloc(size_t size)
 void * get_stack_bottom()
 {
     pthread_attr_t attrs;
-    assert( ("Pthread failed to instantialise attrs",pthread_getattr_np( pthread_self(), &attrs ) == 0));
+    assert( ("Pthread failed to instantialise attrs", pthread_getattr_np( pthread_self(), &attrs ) == 0));
     void   *stackAddr;
     size_t  stackSize;
-    assert(("Pthread failed to aquire stack data",pthread_attr_getstack( &attrs, &stackAddr, &stackSize ) == 0));
+    assert(("Pthread failed to aquire stack data", pthread_attr_getstack( &attrs, &stackAddr, &stackSize ) == 0));
     printf("Stack size = %lu stack top bottom bound %p\n", stackSize, stackAddr);
     return (void *)((char *)stackAddr + stackSize);
-    // FILE *statfp;
-    // long unsigned stack_bottom;
-
-    // statfp = fopen("/proc/self/stat", "r");
-    // assert(statfp != NULL);
-    // fscanf(statfp,
-    //        "%*d %*s %*c %*d %*d %*d %*d %*d %*u "
-    //        "%*lu %*lu %*lu %*lu %*lu %*lu %*ld %*ld "
-    //        "%*ld %*ld %*ld %*ld %*llu %*lu %*ld "
-    //        "%*lu %*lu %*lu %lu", &stack_bottom);
-    // fclose(statfp);
-    // printf("Stack bottom = %lu\n", stack_bottom);
-    // return reinterpret_cast<void*>(stack_bottom);
 }
 #endif

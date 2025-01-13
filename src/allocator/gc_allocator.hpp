@@ -19,6 +19,7 @@ class allocator
    void scan_stack_memory_references(raw_pointer low, raw_pointer high);
    void scan_heap_memory_references();
    void clean_allocated_memory();
+   void scan_for_references(memory_list);
    memory<ActiveManagement> free_memory{};
    memory<PassiveManagement> allocated_memory{};
 };
