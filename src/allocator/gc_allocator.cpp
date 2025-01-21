@@ -2,6 +2,10 @@
 #include "gc_allocator.hpp"
 #include "sys_deps/sys_mem_alloc.hpp"
 
+extern unsigned long end, etext; // These are symbols defined by the linker
+
+namespace gc
+{
 void* allocator::get_block(size_t block_size)
 {
   std::optional<memory_block*> reused_block = free_memory.release_block(block_size);
@@ -112,7 +116,6 @@ void allocator::clean_allocated_memory()
 }
 void allocator::collect()
 {
-  extern unsigned long end, etext; // These are symbols defined by the linker
   void * stack_top;
   void * stack_bottom = get_stack_bottom();
   asm volatile ("mov %%rbp, %0;" : "=r" (stack_top));
@@ -133,3 +136,4 @@ allocator allocator::getInstance()
   static allocator instance{};
   return instance;
 }
+} // END gc

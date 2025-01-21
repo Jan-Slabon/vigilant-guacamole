@@ -3,7 +3,8 @@
 #include <stdlib.h>
 #include <optional>
 #include "memory/memory.hpp"
-
+namespace gc
+{
 class allocator
 {
    public:
@@ -23,3 +24,4 @@ class allocator
    memory<ActiveManagement> free_memory{};
    memory<PassiveManagement> allocated_memory{};
 };
+}

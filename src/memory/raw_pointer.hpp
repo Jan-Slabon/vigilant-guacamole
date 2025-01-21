@@ -4,6 +4,7 @@ class raw_pointer
     void * ptr;
 
     public:
+    raw_pointer(){}
     raw_pointer(void * ptr) : ptr{ptr}{}
     void * operator*(){
         return reinterpret_cast<void*>(*reinterpret_cast<long unsigned*>(ptr));
@@ -18,6 +19,7 @@ class raw_pointer
         return *this;
     }
     raw_pointer operator++(int){ raw_pointer tmp = *this; ++(*this); return tmp; }
+    raw_pointer& operator+=(size_t offset){ (*this) = (*this) + offset; return (*this);}
     operator void*(){return ptr;}
     /*
     Following definitions are allready provided by implicit void* cast
